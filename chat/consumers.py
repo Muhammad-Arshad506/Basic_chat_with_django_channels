@@ -3,8 +3,9 @@ import json
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-from .models import Message
-from .serialzer import MessageSerializer
+# from .models import *
+from .serialzer import *
+
 
 class ChatConsumer(AsyncWebsocketConsumer):
     online_user = []
@@ -52,17 +53,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def get_unread_message(self, receiver):
         try:
-            messages = Message.objects.filter(receiver=receiver,is_delivered=False)
-            serialized_message = MessageSerializer(messages,many=True)
+            messages = Message.objects.filter(receiver=receiver, is_delivered=False)
+            serialized_message = MessageSerializer(messages, many=True)
             result = self.get_sender_all_message(serialized_message.data)
-            messages.update(is_delivered = True)
+            messages.update(is_delivered=True)
             return result
         except Exception as e:
             print(e)
             result = f"failed to get unread message =====> {e}"
             return result
 
-    def get_sender_all_message(self,message):
+    def get_sender_all_message(self, message):
 
         required_result = {}
         for i in message:
@@ -76,10 +77,27 @@ class ChatConsumer(AsyncWebsocketConsumer):
 class GroupConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
+        self.user = self.scope["user"].username
+        rooms = await self.get_all_group()
+        for room in rooms:
+            await self.channel_layer.group_add(room,self.channel_name)
         await self.accept()
 
     async def disconnect(self, code):
         await self.close(code)
 
     async def receive(self, text_data=None, bytes_data=None):
-        print(text_data)
+        data = json.loads(text_data)
+        await self.channel_layer.group_send(data["receiver"],
+                                            {
+                                                "type": "chat.message",
+                                                "text": data["text"],
+                                            },
+                                            )
+    @database_sync_to_async
+    def get_all_group(self):
+        room = Group.objects.filter(member=self.scope["id"])
+        room_ser = GroupSerializer(room, many=True).data
+        return list(room_ser)
+    async def chat_message(self, event):
+        await self.send(text_data=event["text"])
