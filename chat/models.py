@@ -26,11 +26,13 @@ class Group(models.Model):
     def __str__(self):
         return self.name
 
+
 class GroupMessage(models.Model):
     text = models.TextField()
-    group = models.ForeignKey(to = Group, on_delete=models.CASCADE,related_name="group_message")
+    group = models.ForeignKey(to=Group, on_delete=models.CASCADE, related_name="group_message")
     sender = models.CharField(max_length=50)
     message_time = models.DateTimeField(auto_now_add=True)
+    is_delivered = models.BooleanField(default=False)
 
     def __str__(self):
         return self.text

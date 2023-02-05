@@ -22,3 +22,8 @@ class GroupMessageSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = ["username","first_name","last_name"]
+
